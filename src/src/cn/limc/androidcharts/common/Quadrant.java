@@ -33,7 +33,7 @@ import cn.limc.androidcharts.view.GridChart;
  * @version v1.0 2014/06/24 17:29:01 
  *  
  */
-public abstract class Quadrant implements IQuadrant{
+public abstract class Quadrant implements IQuadrant {
 	
 	protected GridChart inChart;
 	

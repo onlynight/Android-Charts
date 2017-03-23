@@ -21,16 +21,17 @@
 
 package cn.limc.androidcharts.view;
 
-import java.util.List;
-
-import cn.limc.androidcharts.common.IFlexableGrid;
-import cn.limc.androidcharts.entity.DateValueEntity;
-import cn.limc.androidcharts.entity.LineEntity;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.util.AttributeSet;
+
+import java.util.List;
+
+import cn.limc.androidcharts.common.IFlexableGrid;
+import cn.limc.androidcharts.entity.DateValueEntity;
+import cn.limc.androidcharts.entity.LineEntity;
 
 /**
  * <p>
@@ -119,10 +120,14 @@ public class SlipAreaChart extends SlipLineChart {
 	@Override
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
+	}
+
+	@Override
+	public void drawData(Canvas canvas){
+		super.drawData(canvas);
 		// draw lines
 		drawAreas(canvas);
 	}
-
 	/**
 	 * <p>
 	 * draw lines
@@ -138,6 +143,9 @@ public class SlipAreaChart extends SlipLineChart {
 	 */
 	protected void drawAreas(Canvas canvas) {
 		if (null == linesData) {
+			return;
+		}
+		if (0 == linesData.size()) {
 			return;
 		}
 		// distance between two points
@@ -167,15 +175,15 @@ public class SlipAreaChart extends SlipLineChart {
 
 			// set start point’s X
 			if (lineAlignType == IFlexableGrid.ALIGN_TYPE_CENTER) {
-                lineLength= (dataQuadrant.getPaddingWidth() / displayNumber);
+                lineLength= (dataQuadrant.getPaddingWidth() / getDisplayNumber());
                 startX = dataQuadrant.getPaddingStartX() + lineLength / 2;
             }else {
-                lineLength= (dataQuadrant.getPaddingWidth() / (displayNumber - 1));
+                lineLength= (dataQuadrant.getPaddingWidth() / (getDisplayNumber() - 1));
                 startX = dataQuadrant.getPaddingStartX();
             }
 			
 			Path linePath = new Path();
-			for (int j = displayFrom; j < displayFrom + displayNumber; j++) {
+			for (int j = getDisplayFrom(); j < getDisplayTo(); j++) {
 				float value = lineData.get(j).getValue();
 				// calculate Y
 				float valueY = (float) ((1f - (value - minValue)
@@ -183,10 +191,10 @@ public class SlipAreaChart extends SlipLineChart {
 						+ dataQuadrant.getPaddingStartY();
 
 				// if is not last point connect to previous point
-				if (j == displayFrom) {
+				if (j == getDisplayFrom()) {
 					linePath.moveTo(startX, dataQuadrant.getPaddingEndY());
 					linePath.lineTo(startX, valueY);
-				} else if (j == displayFrom + displayNumber - 1) {
+				} else if (j == getDisplayTo() - 1) {
 					linePath.lineTo(startX, valueY);
 					linePath.lineTo(startX, dataQuadrant.getPaddingEndY());
 				} else {

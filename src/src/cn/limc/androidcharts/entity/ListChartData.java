@@ -34,55 +34,58 @@ import java.util.List;
  * <p>
  * cn
  * </p>
- * 
+ *
  * @author limc
  * @version v1.0 2014/03/18 15:18:47
- * 
  */
 public class ListChartData<T> implements IChartData<T> {
-	private List<T> datas;
+    private List<T> datas;
 
-	public int size() {
-		return datas.size();
-	}
+    public int size() {
+        return datas.size();
+    }
 
-	public T get(int index) {
-		return datas.get(index);
-	}
+    public T get(int index) {
 
-	public boolean hasData() {
-		return datas != null && !datas.isEmpty();
-	}
+        if (index >= datas.size()) {
+            return datas.get(datas.size()-1);
+        } else {
+            return datas.get(index);
+        }
+    }
 
-	public boolean hasNoData() {
-		return !hasData();
-	}
+    public boolean hasData() {
+        return datas != null && !datas.isEmpty();
+    }
 
-	public void add(T data) {
-		if (null == datas || datas.isEmpty()) {
-			datas = new ArrayList<T>();
-		}
-		datas.add(data);
-	}
+    public boolean hasNoData() {
+        return !hasData();
+    }
 
-	/**
-	 * <p>
-	 * Constructor of ListChartData
-	 * </p>
-	 * <p>
-	 * IChartData类对象的构造函数
-	 * </p>
-	 * <p>
-	 * IChartDataのコンストラクター
-	 * </p>
-	 * 
-	 */
-	public ListChartData() {
-		datas = new ArrayList<T>();
-	}
+    public void add(T data) {
+        if (null == datas || datas.isEmpty()) {
+            datas = new ArrayList<T>();
+        }
+        datas.add(data);
+    }
 
-	public ListChartData(List<T> data) {
-		datas = new ArrayList<T>();
-		datas.addAll(data);
-	}
+    /**
+     * <p>
+     * Constructor of ListChartData
+     * </p>
+     * <p>
+     * IChartData类对象的构造函数
+     * </p>
+     * <p>
+     * IChartDataのコンストラクター
+     * </p>
+     */
+    public ListChartData() {
+        datas = new ArrayList<T>();
+    }
+
+    public ListChartData(List<T> data) {
+        datas = new ArrayList<T>();
+        datas.addAll(data);
+    }
 }

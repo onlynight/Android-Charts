@@ -24,6 +24,7 @@ package cn.limc.androidcharts.axis;
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
+
 import cn.limc.androidcharts.view.GridChart;
 
 /** 
@@ -47,7 +48,7 @@ public class HorizontalAxis extends Axis {
      * 默认轴线下边距
      * </p>
      */
-    public static final float DEFAULT_HEIGHT = 16f;
+    public static final float DEFAULT_HEIGHT = 28f;
 
 	protected float height = DEFAULT_HEIGHT;
 	/** 
@@ -93,7 +94,7 @@ public class HorizontalAxis extends Axis {
      * 
      * @param canvas
      */
-    public void draw(Canvas canvas) {  
+    public void draw(Canvas canvas) {
         float length = inChart.getWidth();
         float postY;
         if (position == AXIS_X_POSITION_BOTTOM) {

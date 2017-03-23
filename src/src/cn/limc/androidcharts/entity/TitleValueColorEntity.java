@@ -38,7 +38,7 @@ package cn.limc.androidcharts.entity;
  * 
  */
 public class TitleValueColorEntity extends TitleValueEntity implements
-		IHasColor {
+        IHasColor {
 
 	/**
 	 * <p>

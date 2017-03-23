@@ -21,6 +21,13 @@
 
 package cn.limc.androidcharts.view;
 
+import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.PathEffect;
+import android.graphics.PointF;
+import android.util.AttributeSet;
+import android.view.MotionEvent;
+
 import java.util.List;
 
 import cn.limc.androidcharts.axis.Axis;
@@ -34,13 +41,6 @@ import cn.limc.androidcharts.event.IGestureDetector;
 import cn.limc.androidcharts.event.ITouchable;
 import cn.limc.androidcharts.event.OnTouchGestureListener;
 import cn.limc.androidcharts.event.TouchGestureDetector;
-
-import android.content.Context;
-import android.graphics.Canvas;
-import android.graphics.PathEffect;
-import android.graphics.PointF;
-import android.util.AttributeSet;
-import android.view.MotionEvent;
 
 /**
  * 
@@ -89,10 +89,11 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 	protected OnTouchGestureListener onTouchGestureListener = new OnTouchGestureListener();
 	protected IGestureDetector touchGestureDetector = new TouchGestureDetector<ITouchable>(this);
 	protected IQuadrant dataQuadrant = new DataQuadrant(this);
-	protected HorizontalAxis axisX = new HorizontalAxis(this,Axis.AXIS_X_POSITION_BOTTOM);
-	protected VerticalAxis axisY = new VerticalAxis(this, Axis.AXIS_Y_POSITION_LEFT);
+	protected HorizontalAxis axisX = new HorizontalAxis(this, Axis.AXIS_X_POSITION_BOTTOM);
+	protected VerticalAxis axisY = new VerticalAxis(this, Axis.AXIS_Y_POSITION_RIGHT);
 	protected CrossLines crossLines = new CrossLines(this);
 	protected SimpleGrid simpleGrid = new SimpleGrid(this);
+	protected boolean detectTouchEvent = true;
 	
 	/*
 	 * (non-Javadoc)
@@ -135,6 +136,10 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 		super(context, attrs);
 	}
 
+
+	public void drawData(Canvas canvas){
+
+	}
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -151,7 +156,11 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 		
 		axisX.draw(canvas);
 		axisY.draw(canvas);
-		simpleGrid.draw(canvas);
+		simpleGrid.drawGrid(canvas);
+
+		this.drawData(canvas);
+
+		simpleGrid.drawTitles(canvas);
 		crossLines.draw(canvas);
 	}
 
@@ -170,7 +179,11 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 		if (!isValidTouchPoint(event.getX(),event.getY())) {
 			return false;
 		}
-		return touchGestureDetector.onTouchEvent(event);
+		if (detectTouchEvent) {
+			return touchGestureDetector.onTouchEvent(event);
+		}{
+			return super.onTouchEvent(event);
+		}
 	}
 	
 	protected boolean isValidTouchPoint (float x , float y) {
@@ -264,6 +277,26 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 	}
 
 
+
+	public String calcAxisXGraduate() {
+		return "";
+	}
+
+	public String xxCalcAxisXGraduate(){
+		return "";
+	}
+
+	public String calcAxisYGraduate() {
+		return "";
+	}
+
+	public long touchPointAxisXValue() {
+		return 0;
+	}
+
+	public double touchPointAxisYValue() {
+		return 0;
+	}
 
 	/**
 	 * @return the axisXColor
@@ -424,7 +457,7 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 	}
 
 	/**
-	 * @param touchPoint.y
+	 * @param clickPostY
 	 *            the clickPostY to set
 	 */
 	@Deprecated
@@ -507,10 +540,49 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 	}
 
 	/* (non-Javadoc)
-	 * 
-	 * @param listener 
-	 * @see cn.limc.androidcharts.event.ITouchable#setOnTouchGestureListener(cn.limc.androidcharts.event.OnTouchGestureListener) 
+	 *
+	 * @see cn.limc.androidcharts.event.ITouchable#longPressDown()
 	 */
+	public void longPressDown(PointF pt) {
+		this.touchPoint = pt;
+		this.crossLines.setDisplayCrossXOnTouch(true);
+		this.crossLines.setDisplayCrossYOnTouch(true);
+		this.postInvalidate();
+	}
+
+	/* (non-Javadoc)
+	 *
+	 * @see cn.limc.androidcharts.event.ITouchable#longPressMoved()
+	 */
+	public void longPressMoved(PointF pt) {
+		this.touchPoint = pt;
+		this.postInvalidate();
+	}
+
+	/* (non-Javadoc)
+	 *
+	 * @see cn.limc.androidcharts.event.ITouchable#longPressUp()
+	 */
+	public void longPressUp(PointF pt) {
+		this.touchPoint = pt;
+		this.crossLines.setDisplayCrossXOnTouch(false);
+		this.crossLines.setDisplayCrossYOnTouch(false);
+		this.postInvalidate();
+	}
+
+	public boolean isDetectTouchEvent() {
+		return detectTouchEvent;
+	}
+
+	public void setDetectTouchEvent(boolean detectTouchEvent) {
+		this.detectTouchEvent = detectTouchEvent;
+	}
+
+	/* (non-Javadoc)
+         *
+         * @param listener
+         * @see cn.limc.androidcharts.event.ITouchable#setOnTouchGestureListener(cn.limc.androidcharts.event.OnTouchGestureListener)
+         */
 	public void setOnTouchGestureListener(OnTouchGestureListener listener) {
 		this.onTouchGestureListener = listener;
 	}
@@ -560,7 +632,7 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 	}
 
 	/**
-	 * @param paddingTop
+	 * @param quadrantPaddingTop
 	 *            the paddingTop to set
 	 */
 	public void setDataQuadrantPaddingTop(float quadrantPaddingTop) {
@@ -575,7 +647,7 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 	}
 
 	/**
-	 * @param paddingLeft
+	 * @param quadrantPaddingLeft
 	 *            the paddingLeft to set
 	 */
 	public void setDataQuadrantPaddingLeft(float quadrantPaddingLeft) {
@@ -590,7 +662,7 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 	}
 
 	/**
-	 * @param paddingBottom
+	 * @param quadrantPaddingBottom
 	 *            the paddingBottom to set
 	 */
 	public void setDataQuadrantPaddingBottom(float quadrantPaddingBottom) {
@@ -605,11 +677,12 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
 	}
 
 	/**
-	 * @param paddingRight
+	 * @param quadrantPaddingRight
 	 *            the paddingRight to set
 	 */
 	public void setDataQuadrantPaddingRight(float quadrantPaddingRight) {
 		dataQuadrant.setPaddingRight(quadrantPaddingRight);
+		axisY.setWidth(quadrantPaddingRight);
 	}
 
     /**
@@ -980,4 +1053,6 @@ public class GridChart extends AbstractBaseChart implements ITouchable {
     public void setLatitudeColor(int latitudeColor) {
         this.simpleGrid.setLatitudeColor(latitudeColor);
     }
+
+
 }

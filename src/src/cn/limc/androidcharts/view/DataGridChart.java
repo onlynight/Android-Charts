@@ -22,8 +22,11 @@
 
 package cn.limc.androidcharts.view;
 
+import android.content.Context;
+import android.graphics.Canvas;
+import android.util.AttributeSet;
+
 import java.text.DecimalFormat;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -31,10 +34,7 @@ import cn.limc.androidcharts.common.IDataCursor;
 import cn.limc.androidcharts.entity.IChartData;
 import cn.limc.androidcharts.entity.IMeasurable;
 import cn.limc.androidcharts.entity.IStickEntity;
-
-import android.content.Context;
-import android.graphics.Canvas;
-import android.util.AttributeSet;
+import cn.limc.androidcharts.event.ITouchedIndexListener;
 
 /** 
  * <p>en</p>
@@ -48,17 +48,29 @@ import android.util.AttributeSet;
 public abstract class DataGridChart extends GridChart implements IDataCursor {
 	
 	public static final boolean DEFAULT_AUTO_CALC_VALUE_RANGE = true;
-	
+	public static final boolean DEFAULT_AUTO_CALC_LONGITUDE_TITLES = true;
+	public static final boolean DEFAULT_AUTO_CALC_LATITUDE_TITLES = true;
+	public static final boolean DEFAULT_AUTO_CALC_BALANCE_RANGE = false;
+	public static final float[] DEFAULT_NONE_DISPLAY_VALUE = new float[]{};
+
 	public static final int DEFAULT_DATA_MULTIPLE = 1;
-	public static final String DEFAULT_AXIS_Y_DECIMAL_FORMAT = "#,##0";
+	public static final String DEFAULT_AXIS_Y_DECIMAL_FORMAT = "#,##0.00";
 	public static final String DEFAULT_AXIS_X_DATE_TARGET_FORMAT = "yyyy/MM/dd";
 	public static final String DEFAULT_AXIS_X_DATE_SOURCE_FORMAT = "yyyyMMdd";
 	
-	protected int dataMultiple =  DEFAULT_DATA_MULTIPLE;
+	public int dataMultiple =  DEFAULT_DATA_MULTIPLE;
 	
 	protected String axisYDecimalFormat = DEFAULT_AXIS_Y_DECIMAL_FORMAT;
 	protected String axisXDateTargetFormat = DEFAULT_AXIS_X_DATE_TARGET_FORMAT;
 	protected String axisXDateSourceFormat = DEFAULT_AXIS_X_DATE_SOURCE_FORMAT;
+
+	public float[] noneDisplayValue = DEFAULT_NONE_DISPLAY_VALUE;
+
+	public abstract IDataCursor getDataCursor();
+
+	public abstract IChartData<IStickEntity> getChartData();
+	
+	protected  ITouchedIndexListener touchedIndexListener;
 	
 	/**
 	 * <p>
@@ -86,13 +98,20 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 	 */
 	protected double minValue;
 
+	protected double maxDataValue;
+	protected double minDataValue;
+
 	protected boolean autoCalcValueRange = DEFAULT_AUTO_CALC_VALUE_RANGE;
-	
-	
+	protected boolean autoBalanceValueRange = DEFAULT_AUTO_CALC_BALANCE_RANGE;
+
+	protected boolean autoCalcLongitudeTitle = DEFAULT_AUTO_CALC_LONGITUDE_TITLES;
+	protected boolean autoCalcLatitudeTitle = DEFAULT_AUTO_CALC_LATITUDE_TITLES;
+
+
 	protected void calcDataValueRange() {
 		double maxValue = Double.MIN_VALUE;
 		double minValue = Double.MAX_VALUE;
-		IMeasurable first = this.stickData.get(getDisplayFrom());
+		IMeasurable first = getChartData().get(getDataCursor().getDisplayFrom());
 		// 第一个stick为停盘的情况
 		if (first.getHigh() == 0 && first.getLow() == 0) {
 
@@ -101,9 +120,8 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 			minValue = first.getLow();
 		}
 
-		for (int i = getDisplayFrom(); i < getDisplayTo(); i++) {
-			IMeasurable stick;
-			stick = this.stickData.get(i);
+		for (int i = getDataCursor().getDisplayFrom(); i < getDataCursor().getDisplayTo(); i++) {
+			IMeasurable stick = getChartData().get(i);
 			
 			if (stick.getLow() < minValue) {
 				minValue = stick.getLow();
@@ -113,6 +131,11 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 				maxValue = stick.getHigh();
 			}
 
+		}
+
+		if (maxValue < minValue ){
+			maxValue = 0;
+			minValue = 0;
 		}
 
 		this.maxValue = maxValue;
@@ -193,7 +216,7 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 	}
 
 	protected void calcValueRange() {
-		if (this.stickData != null && this.stickData.size() > 0) {
+		if (getChartData() != null && getChartData().size() > 0) {
 			this.calcDataValueRange();
 			this.calcValueRangePaddingZero();
 		} else {
@@ -201,23 +224,18 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 			this.minValue = 0;
 		}
 		this.calcValueRangeFormatForAxis();
+		if (autoBalanceValueRange){
+			this.balanceRange();
+		}
 	}
-	
-	
-	/**
-	 * <p>
-	 * data to draw sticks
-	 * </p>
-	 * <p>
-	 * スティックを書く用データ
-	 * </p>
-	 * <p>
-	 * 绘制柱条用的数据
-	 * </p>
-	 */
-	protected IChartData<IStickEntity> stickData;
-	
-//	protected IDataCursor dataCursor = this;
+
+	protected void balanceRange(){
+		// auto balance
+		this.maxValue = Math.max(Math.abs(this.maxValue), Math.abs(this.minValue));
+		this.minValue = -Math.max(Math.abs(this.maxValue), Math.abs(this.minValue));
+	}
+
+//	protected IDataCursor getDataCursor() = this;
 	
 	/** 
 	 * <p>Constructor of DataGridChart</p>
@@ -257,9 +275,25 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 		super(context, attrs);
 		// TODO Auto-generated constructor stub
 	}
-	
-	protected void onDraw(Canvas canvas) {		
+
+	@Override
+	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
+	}
+
+	public boolean isNoneDisplayValue(double value){
+		if (noneDisplayValue == null){
+			return false;
+		}
+		if (noneDisplayValue.length == 0){
+			return false;
+		}
+		for(int i = 0 ; i < noneDisplayValue.length; i++){
+			if (value - noneDisplayValue[i] == 0){
+				return true;
+			}
+		}
+		return false;
 	}
 	
 	/*
@@ -272,15 +306,15 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 	@Override
 	public String getAxisXGraduate(Object value) {
 		float graduate = Float.valueOf(super.getAxisXGraduate(value));
-		int index = (int) Math.floor(graduate * getDisplayNumber());
+		int index = (int) Math.floor(graduate * getDataCursor().getDataDisplayNumber());
 
-		if (index >= getDisplayNumber()) {
-			index = getDisplayNumber() - 1;
+		if (index >= getDataCursor().getDisplayNumber()) {
+			index = getDataCursor().getDisplayNumber() - 1;
 		} else if (index < 0) {
 			index = 0;
 		}
 
-		return formatAxisXDegree(stickData.get(index).getDate());
+		return formatAxisXDegree(getChartData().get(index).getDate());
 	}
 
 	/*
@@ -298,18 +332,114 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 	
 	
 	public String formatAxisYDegree(double value) {
-		return new DecimalFormat(axisYDecimalFormat).format(Math.floor(value)/dataMultiple);
+		//TODO:格式改成属性
+		//数据
+		//xx create
+
+		if (value > 1){
+			double displayValue = Math.floor(value * 1000) / 1000;
+			return new DecimalFormat("#,##0.00").format(displayValue);
+		}else {
+			double displayValue = Math.floor(value * 1000) / 1000;
+			return new DecimalFormat("#,##0.00").format(displayValue);
+		}
+
+		//end xx create
+//		double displayValue = Math.floor(value) / dataMultiple;
+//		if(displayValue < 10000){
+//			return new DecimalFormat(axisYDecimalFormat).format(displayValue);
+//		}else if(displayValue < 100000000){
+//			return new DecimalFormat("#,##0").format(displayValue/10000) + "万";
+//		}else {
+//			return new DecimalFormat("#,##0").format(displayValue/100000000) + "亿";
+//		}
+	}
+
+	public String XXformatAxisYDegree(double value) {
+		//TODO:格式改成属性
+		//数据
+//		double displayValue = Math.floor(value) / dataMultiple;
+//		if(displayValue < 10000){
+//			return new DecimalFormat(axisYDecimalFormat).format(displayValue);
+//		}else if(displayValue < 100000000){
+//			return new DecimalFormat("#,##0").format(displayValue/10000) + "万";
+//		}else {
+//			return new DecimalFormat("#,##0").format(displayValue/100000000) + "亿";
+//		}
+		return value+"";
 	}
 	
-	public String formatAxisXDegree(int date) {
-		try {
-			Date dt = new SimpleDateFormat(axisXDateSourceFormat).parse(String.valueOf(date));
-			return new SimpleDateFormat(axisXDateTargetFormat).format(dt);
-		} catch (ParseException e) {
+	public String formatAxisXDegree(long date) {
+//		try {
+//			Date dt = new SimpleDateFormat(axisXDateSourceFormat).parse(String.valueOf(date));
+//			return new SimpleDateFormat(axisXDateTargetFormat).format(dt);
+			//xx create
+		return timeStamp2Date(date+"", axisXDateTargetFormat);
+//			return timeStamp2Date(date+"", "yyyy-MM-dd HH:mm:ss");
+//		} catch (ParseException e) {
+//			return "";
+//		}
+	}
+
+	/**
+	 * 时间戳转换成日期格式字符串
+	 * @param seconds 精确到秒的字符串
+	 * @param format
+	 * @return
+	 */
+	public String timeStamp2Date(String seconds, String format) {
+		if(seconds == null || seconds.isEmpty() || seconds.equals("null")){
 			return "";
 		}
+		if(format == null || format.isEmpty()) format = "yyyy-MM-dd HH:mm:ss";
+		SimpleDateFormat sdf = new SimpleDateFormat(format);
+		return sdf.format(new Date(Long.valueOf(seconds+"000")));
 	}
-	
+	@Override
+	public String calcAxisXGraduate() {
+		long date = touchPointAxisXValue();
+		return  date >0 ? formatAxisXDegree(date):"";
+	}
+
+	@Override
+	public String xxCalcAxisXGraduate(){
+		long date = touchPointAxisXValue();
+		String format = "";
+		if (axisXDateTargetFormat.equals("HH:mm")){
+			format = "yyyy-MM-dd HH:mm";
+		}else if (axisXDateTargetFormat.equals("dd HH:mm")){
+			format = "yyyy-MM-dd HH:mm";
+		}else if (axisXDateTargetFormat.equals("MM/dd")){
+			format = "yyyy-MM-dd";
+		}else if (axisXDateTargetFormat.equals("MM/dd")){
+			format = "yyyy-MM-dd";
+		}else{
+			format = null;
+		}
+		return  date >0 ? timeStamp2Date(date+"", format):"";
+	}
+
+	@Override
+	public String calcAxisYGraduate() {
+		return  formatAxisYDegree(this.touchPointAxisYValue());
+	}
+
+	@Override
+	public long touchPointAxisXValue() {
+		if (null == touchPoint) {
+			return 0;
+		}
+		return getChartData().get(getSelectedIndex()).getDate();
+	}
+
+	@Override
+	public double touchPointAxisYValue() {
+		if (null == touchPoint) {
+			return 0;
+		}
+		return (1 - (touchPoint.y - dataQuadrant.getPaddingStartY()) / dataQuadrant.getPaddingHeight())  * (maxValue - minValue) + minValue;
+	}
+
 	/**
 	 * <p>
 	 * get current selected data index
@@ -344,15 +474,15 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 			return 0;
 		}
 		float graduate = Float.valueOf(super.getAxisXGraduate(x));
-		int index = (int) Math.floor(graduate * getDisplayNumber());
+		int index = (int) Math.floor(graduate * getDataCursor().getDataDisplayNumber());
 
-		if (index >= getDisplayNumber()) {
-			index = getDisplayNumber() - 1;
+		if (index >= getDataCursor().getDisplayNumber()) {
+			index = getDataCursor().getDisplayNumber() - 1;
 		} else if (index < 0) {
 			index = 0;
 		}
 		
-		return getDisplayFrom() + index;
+		return getDataCursor().getDisplayFrom() + index;
 	}	
 	
 	/**
@@ -441,6 +571,22 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 		this.minValue = minValue;
 	}
 
+	public double getMaxDataValue() {
+		return maxDataValue;
+	}
+
+	public void setMaxDataValue(double maxDataValue) {
+		this.maxDataValue = maxDataValue;
+	}
+
+	public double getMinDataValue() {
+		return minDataValue;
+	}
+
+	public void setMinDataValue(double minDataValue) {
+		this.minDataValue = minDataValue;
+	}
+
 	/**
 	 * @return the autoCalcValueRange
 	 */
@@ -454,5 +600,193 @@ public abstract class DataGridChart extends GridChart implements IDataCursor {
 	 */
 	public void setAutoCalcValueRange(boolean autoCalcValueRange) {
 		this.autoCalcValueRange = autoCalcValueRange;
+	}
+
+
+	public int getDisplayFrom() {
+		return getDataCursor().getDisplayFrom();
+	}
+
+	/* (non-Javadoc)
+	 *
+	 * @return
+	 * @see cn.limc.androidcharts.view.IDataCursor#getDisplayNumber()
+	 */
+	public int getDisplayNumber() {
+		return getDataCursor().getDisplayNumber();
+	}
+
+	/* (non-Javadoc)
+	 *
+	 * @return
+	 * @see cn.limc.androidcharts.view.IDataCursor#displayTo()
+	 */
+	public int getDisplayTo() {
+		return getDataCursor().getDisplayTo();
+	}
+
+	public boolean forward(int step){
+		return getDataCursor().forward(step);
+	}
+
+	public boolean backward(int step){
+		return getDataCursor().backward(step);
+	}
+
+	public boolean stretch(int step){
+		return getDataCursor().stretch(step);
+	}
+
+	public boolean shrink(int step){
+		return getDataCursor().shrink(step);
+	}
+
+	/* (non-Javadoc)
+	 *
+	 * @param getDisplayFrom()
+	 * @see cn.limc.androidcharts.common.IDataCursor#setgetDisplayFrom()(int)
+	 */
+	public void setDisplayFrom(int displayFrom) {
+		getDataCursor().setDisplayFrom(displayFrom);
+
+	}
+
+	/* (non-Javadoc)
+	 *
+	 * @param getDisplayNumber()
+	 * @see cn.limc.androidcharts.common.IDataCursor#setgetDisplayNumber()(int)
+	 */
+	public void setDisplayNumber(int displayNumber) {
+		getDataCursor().setDisplayNumber(displayNumber);
+	}
+
+	/* (non-Javadoc)
+    *
+    * @param mingetDisplayNumber()
+    * @see cn.limc.androidcharts.common.IDataCursor#setMingetDisplayNumber()(int)
+    */
+	public void setMinDisplayNumber(int minDisplayNumber) {
+		getDataCursor().setMinDisplayNumber(minDisplayNumber);
+	}
+
+	/* (non-Javadoc)
+	 *
+	 * @return
+	 * @see cn.limc.androidcharts.common.IDataCursor#getMaxDisplayNumber()
+	 */
+	public int getMaxDisplayNumber() {
+		return getDataCursor().getMaxDisplayNumber();
+	}
+
+	/* (non-Javadoc)
+    *
+    * @param mingetDisplayNumber()
+    * @see cn.limc.androidcharts.common.IDataCursor#setMaxDisplayNumber()(int)
+    */
+	public void setMaxDisplayNumber(int maxDisplayNumber) {
+		getDataCursor().setMaxDisplayNumber(maxDisplayNumber);
+	}
+
+	/* (non-Javadoc)
+	 *
+	 * @return
+	 * @see cn.limc.androidcharts.common.IDataCursor#getMinDisplayNumber()
+	 */
+	public int getMinDisplayNumber() {
+		return getDataCursor().getMinDisplayNumber();
+	}
+
+	/* (non-Javadoc)
+	 *
+	 * @return
+	 * @see cn.limc.androidcharts.common.IDataCursor#getMinDisplayNumber()
+	 */
+	public int getDataDisplayNumber() {
+		return getDataCursor().getDataDisplayNumber();
+	}
+
+
+	/**
+	 * @return the bindCrossLinesToStick
+	 */
+	public int getBindCrossLinesToStick() {
+		return this.crossLines.getBindCrossLinesToStick();
+	}
+
+	/**
+	 * @param bindCrossLinesToStick the bindCrossLinesToStick to set
+	 */
+	public void setBindCrossLinesToStick(int bindCrossLinesToStick) {
+		this.crossLines.setBindCrossLinesToStick(bindCrossLinesToStick);
+	}
+
+	/**
+	 * @return the maxPointNum
+	 */
+	@Deprecated
+	public int getMaxPointNum() {
+		return getDisplayNumber();
+	}
+
+	/**
+	 * @param maxPointNum
+	 *            the maxPointNum to set
+	 */
+	@Deprecated
+	public void setMaxPointNum(int maxPointNum) {
+		setDisplayNumber(maxPointNum);
+	}
+
+
+	public float[] getNoneDisplayValue() {
+		return noneDisplayValue;
+	}
+
+	public void setNoneDisplayValue(float[] noneDisplayValue) {
+		this.noneDisplayValue = noneDisplayValue;
+	}
+
+	public boolean isAutoBalanceValueRange() {
+		return autoBalanceValueRange;
+	}
+
+	public void setAutoBalanceValueRange(boolean autoBalanceValueRange) {
+		this.autoBalanceValueRange = autoBalanceValueRange;
+	}
+
+	public ITouchedIndexListener getTouchedIndexListener() {
+		return touchedIndexListener;
+	}
+
+	public void setTouchedIndexListener(ITouchedIndexListener touchedIndexListener) {
+		this.touchedIndexListener = touchedIndexListener;
+	}
+
+	public boolean isAutoCalcLongitudeTitle() {
+		return autoCalcLongitudeTitle;
+	}
+
+	public void setAutoCalcLongitudeTitle(boolean autoCalcLongitudeTitle) {
+		this.autoCalcLongitudeTitle = autoCalcLongitudeTitle;
+	}
+
+	public boolean isAutoCalcLatitudeTitle() {
+		return autoCalcLatitudeTitle;
+	}
+
+	public void setAutoCalcLatitudeTitle(boolean autoCalcLatitudeTitle) {
+		this.autoCalcLatitudeTitle = autoCalcLatitudeTitle;
+	}
+
+	public float computeValueY(float value){
+		return (float)((1f - (value - minValue)
+				/ (maxValue - minValue))
+				* (dataQuadrant.getPaddingHeight()) + dataQuadrant.getPaddingStartY());
+	}
+
+	public double computeValueY(double value){
+		return ((1f - (value - minValue)
+				/ (maxValue - minValue))
+				* (dataQuadrant.getPaddingHeight()) + dataQuadrant.getPaddingStartY());
 	}
 }

@@ -21,14 +21,16 @@
 
 package cn.limc.androidcharts.view;
 
-import cn.limc.androidcharts.entity.OHLCEntity;
-
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.graphics.Rect;
 import android.util.AttributeSet;
+
+import cn.limc.androidcharts.entity.IMeasurable;
+import cn.limc.androidcharts.entity.OHLCEntity;
 
 /**
  * <p>
@@ -58,7 +60,7 @@ public class SlipCandleStickChart extends SlipStickChart {
 	 * 默认阳线的边框颜色
 	 * </p>
 	 */
-	public static final int DEFAULT_POSITIVE_STICK_BORDER_COLOR = Color.RED;
+	public static final int DEFAULT_POSITIVE_STICK_BORDER_COLOR = Color.parseColor("#ed4d4d");
 
 	/**
 	 * <p>
@@ -71,7 +73,7 @@ public class SlipCandleStickChart extends SlipStickChart {
 	 * 默认阳线的填充颜色
 	 * </p>
 	 */
-	public static final int DEFAULT_POSITIVE_STICK_FILL_COLOR = Color.RED;
+	public static final int DEFAULT_POSITIVE_STICK_FILL_COLOR = Color.parseColor("#ed4d4d");
 
 	/**
 	 * <p>
@@ -84,7 +86,7 @@ public class SlipCandleStickChart extends SlipStickChart {
 	 * 默认阴线的边框颜色
 	 * </p>
 	 */
-	public static final int DEFAULT_NEGATIVE_STICK_BORDER_COLOR = Color.GREEN;
+	public static final int DEFAULT_NEGATIVE_STICK_BORDER_COLOR = Color.parseColor("#52ba27");
 
 	/**
 	 * <p>
@@ -97,7 +99,7 @@ public class SlipCandleStickChart extends SlipStickChart {
 	 * 默认阴线的填充颜色
 	 * </p>
 	 */
-	public static final int DEFAULT_NEGATIVE_STICK_FILL_COLOR = Color.GREEN;
+	public static final int DEFAULT_NEGATIVE_STICK_FILL_COLOR = Color.parseColor("#52ba27");
 
 	/**
 	 * <p>
@@ -194,7 +196,7 @@ public class SlipCandleStickChart extends SlipStickChart {
 	 * @param defStyle
 	 */
 	public SlipCandleStickChart(Context context, AttributeSet attrs,
-			int defStyle) {
+                                int defStyle) {
 		super(context, attrs, defStyle);
 		// TODO Auto-generated constructor stub
 	}
@@ -236,6 +238,53 @@ public class SlipCandleStickChart extends SlipStickChart {
 		// TODO Auto-generated constructor stub
 	}
 
+	@Override
+	protected void calcDataValueRange() {
+		double maxValue = Double.MIN_VALUE;
+		double minValue = Double.MAX_VALUE;
+
+		IMeasurable first = this.stickData.get(getDisplayFrom());
+		// 第一个stick为停盘的情况
+		if (first.getHigh() == 0 && first.getLow() == 0) {
+
+		} else {
+			maxValue = first.getHigh();
+			minValue = first.getLow();
+		}
+		for (int i = getDisplayFrom(); i < getDisplayTo(); i++) {
+			OHLCEntity stick = (OHLCEntity) this.stickData.get(i);
+
+			if (stick.getOpen() == 0 && stick.getHigh() == 0
+					&& stick.getLow() == 0) {
+				// 停盘期间计算收盘价
+				if (stick.getClose() > 0) {
+					if (stick.getClose() < minValue) {
+						minValue = stick.getClose();
+					}
+
+					if (stick.getClose() > maxValue) {
+						maxValue = stick.getClose();
+					}
+				}
+			} else {
+				if (stick.getLow() < minValue) {
+					minValue = stick.getLow();
+				}
+
+				if (stick.getHigh() > maxValue) {
+					maxValue = stick.getHigh();
+				}
+			}
+		}
+
+		this.maxDataValue = maxValue;
+		this.minDataValue = minValue;
+
+		this.maxValue = maxValue;
+		this.minValue = minValue;
+	}
+
+
 	/*
 	 * (non-Javadoc)
 	 * 
@@ -250,6 +299,16 @@ public class SlipCandleStickChart extends SlipStickChart {
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
 	}
+
+//	@Override
+//	public void drawData(Canvas canvas){
+//		super.drawData(canvas);
+//		if (getDisplayNumber() > displayStickAsLineNumber){
+//			drawSticksAsLine(canvas);
+//		}else{
+//			drawSticks(canvas);
+//		}
+//	}
 
 	/**
 	 * <p>
@@ -273,20 +332,33 @@ public class SlipCandleStickChart extends SlipStickChart {
 			return;
 		}
 
-		float stickWidth = dataQuadrant.getPaddingWidth() / displayNumber
+		float stickWidth = dataQuadrant.getPaddingWidth() / getDataDisplayNumber()
 				- stickSpacing;
 		float stickX = dataQuadrant.getPaddingStartX();
 
-		Paint mPaintPositive = new Paint();
-		mPaintPositive.setColor(positiveStickFillColor);
+		Paint mPaintPositiveFill = new Paint();
+		mPaintPositiveFill.setColor(positiveStickFillColor);
+		mPaintPositiveFill.setStyle(Paint.Style.FILL);
 
-		Paint mPaintNegative = new Paint();
-		mPaintNegative.setColor(negativeStickFillColor);
+		Paint mPaintPositiveBorder = new Paint();
+		mPaintPositiveBorder.setColor(positiveStickBorderColor);
+		mPaintPositiveBorder.setStyle(Paint.Style.STROKE);
+
+		Paint mPaintNegativeFill = new Paint();
+		mPaintNegativeFill.setColor(negativeStickFillColor);
+		mPaintNegativeFill.setStyle(Paint.Style.FILL);
+
+		Paint mPaintNegativeBorder = new Paint();
+		mPaintNegativeBorder.setColor(negativeStickBorderColor);
+		mPaintNegativeBorder.setStyle(Paint.Style.STROKE);
 
 		Paint mPaintCross = new Paint();
 		mPaintCross.setColor(crossStarColor);
 
-		for (int i = displayFrom; i < displayFrom + displayNumber; i++) {
+		boolean maxValueDrawn = false;
+		boolean minValueDrawn = false;
+
+		for (int i = getDisplayFrom(); i < getDisplayTo(); i++) {
 			OHLCEntity ohlc = (OHLCEntity) stickData.get(i);
 			float openY = (float) ((1f - (ohlc.getOpen() - minValue)
 					/ (maxValue - minValue))
@@ -301,49 +373,390 @@ public class SlipCandleStickChart extends SlipStickChart {
 					/ (maxValue - minValue))
 					* (dataQuadrant.getPaddingHeight()) + dataQuadrant.getPaddingStartY());
 
+			float stickCenterX = stickX + stickWidth / 2;
+
 			if (ohlc.getOpen() < ohlc.getClose()) {
 				// stick or line
 				if (stickWidth >= 2f) {
 					canvas.drawRect(stickX, closeY, stickX + stickWidth, openY,
-							mPaintPositive);
+							mPaintPositiveFill);
+					canvas.drawRect(stickX, closeY, stickX + stickWidth, openY,
+							mPaintPositiveBorder);
 				}
-				canvas.drawLine(stickX + stickWidth / 2f, highY, stickX
-						+ stickWidth / 2f, lowY, mPaintPositive);
+				canvas.drawLine(stickCenterX, highY, stickX
+						+ stickWidth / 2f, closeY, mPaintPositiveBorder);
+				canvas.drawLine(stickCenterX, openY, stickX
+						+ stickWidth / 2f, lowY, mPaintPositiveBorder);
 			} else if (ohlc.getOpen() > ohlc.getClose()) {
 				// stick or line
 				if (stickWidth >= 2f) {
 					canvas.drawRect(stickX, openY, stickX + stickWidth, closeY,
-							mPaintNegative);
+							mPaintNegativeFill);
+					canvas.drawRect(stickX, openY, stickX + stickWidth, closeY,
+							mPaintNegativeBorder);
 				}
-				canvas.drawLine(stickX + stickWidth / 2f, highY, stickX
-						+ stickWidth / 2f, lowY, mPaintNegative);
+				canvas.drawLine(stickCenterX, highY, stickX
+						+ stickWidth / 2f, openY, mPaintNegativeBorder);
+				canvas.drawLine(stickCenterX, closeY, stickX
+						+ stickWidth / 2f, lowY, mPaintNegativeBorder);
 			} else {
 				// line or point
 				if (stickWidth >= 2f) {
 					canvas.drawLine(stickX, closeY, stickX + stickWidth, openY,
 							mPaintCross);
 				}
-				canvas.drawLine(stickX + stickWidth / 2f, highY, stickX
+				canvas.drawLine(stickCenterX, highY, stickX
 						+ stickWidth / 2f, lowY, mPaintCross);
 			}
+
+			if (ohlc.getHigh() - this.maxDataValue == 0 && maxValueDrawn == false) {
+				this.XXdrawMaxLabel(canvas, ohlc.getHigh(), new PointF(stickCenterX, highY));
+				maxValueDrawn = true;
+			}
+
+			if (ohlc.getLow() - this.minDataValue == 0 && minValueDrawn == false) {
+				this.XXdrawMinLabel(canvas, ohlc.getLow(), new PointF(stickCenterX, lowY));
+				minValueDrawn = true;
+			}
+
 
 			// next x
 			stickX = stickX + stickSpacing + stickWidth;
 		}
 	}
+
+	protected void drawMaxLabel(Canvas canvas, double value , PointF point){
+		String valueStr = this.formatAxisYDegree(value);
+
+		int textFontSize = 28;
+
+		Paint mPaintBoxLine = new Paint();
+		mPaintBoxLine.setColor(Color.LTGRAY);
+		// mPaintBoxLine.setAlpha(80);
+		mPaintBoxLine.setStyle(Paint.Style.FILL);
+
+		Paint mPaintBoxText = new Paint();
+		mPaintBoxText.setColor(Color.BLACK);
+		mPaintBoxText.setAntiAlias(true);
+		mPaintBoxText.setTextSize(textFontSize);
+
+		Rect textSize = new Rect();
+		mPaintBoxText.getTextBounds(valueStr, 0, valueStr.length(), textSize);
+
+		float spaceToTopBottom = textFontSize ;
+		float spaceToRect = textFontSize * 1.48f;
+
+		if(point.x > dataQuadrant.getStartX() + textSize.width() + spaceToRect){
+			//画左边
+			//向上画
+			canvas.drawLine(point.x, point.y, point.x, point.y - spaceToTopBottom, mPaintBoxLine);
+			canvas.drawLine(point.x, point.y - spaceToTopBottom, point.x - spaceToRect, point.y - spaceToTopBottom, mPaintBoxLine);
+
+			PointF boxHS = new PointF(point.x - textSize.width() - spaceToRect, point.y - textSize.height() / 2.f - spaceToTopBottom - 4);
+			PointF boxHE = new PointF(point.x - spaceToRect, point.y + textSize.height() / 2.f - spaceToTopBottom + 4);
+
+			// draw a rectangle
+			canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+			// draw text
+			canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+
+		}else{
+
+			// 画左边
+			if(point.x > dataQuadrant.getEndX() - textSize.width() - spaceToRect){
+				canvas.drawLine(point.x, point.y, point.x, point.y - spaceToTopBottom, mPaintBoxLine);
+				canvas.drawLine(point.x, point.y - spaceToTopBottom, point.x - spaceToRect, point.y - spaceToTopBottom, mPaintBoxLine);
+
+				PointF boxHS = new PointF(point.x - textSize.width() - spaceToRect, point.y - textSize.height() / 2.f - spaceToTopBottom - 4);
+				PointF boxHE = new PointF(point.x - spaceToRect, point.y + textSize.height() / 2.f - spaceToTopBottom + 4);
+
+				// draw a rectangle
+				canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+				// draw text
+				canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+
+			}else{
+				canvas.drawLine(point.x, point.y, point.x, point.y - spaceToTopBottom, mPaintBoxLine);
+				canvas.drawLine(point.x, point.y - spaceToTopBottom, point.x + spaceToRect, point.y - spaceToTopBottom, mPaintBoxLine);
+
+				//画右边
+//				CGRect textRect = CGRectMake(pt.x + spaceToRect, pt.y - textSize.height / 2.f - spaceToTopBottom, textSize.width, textSize.height);
+
+				PointF boxHS = new PointF(point.x + spaceToRect, point.y - textSize.height() / 2.f - spaceToTopBottom - 4);
+				PointF boxHE = new PointF(point.x + textSize.width() + spaceToRect, point.y + textSize.height() / 2.f - spaceToTopBottom + 4);
+
+				// draw a rectangle
+				canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+				// draw text
+				canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+			}
+		}
+	}
+
+	protected void XXdrawMaxLabel(Canvas canvas, double value , PointF point){
+		String valueStr = this.XXformatAxisYDegree(value);
+
+		int textFontSize = 20;
+
+		Paint mPaintBoxLine = new Paint();
+		mPaintBoxLine.setColor(Color.LTGRAY);
+		// mPaintBoxLine.setAlpha(80);
+		mPaintBoxLine.setStyle(Paint.Style.FILL);
+
+		Paint mPaintBoxText = new Paint();
+		mPaintBoxText.setColor(Color.LTGRAY);
+		mPaintBoxText.setAntiAlias(true);
+		mPaintBoxText.setTextSize(textFontSize);
+
+		Rect textSize = new Rect();
+		mPaintBoxText.getTextBounds(valueStr, 0, valueStr.length(), textSize);
+
+		float spaceToTopBottom = 0;//textFontSize ;
+		float spaceToRect = textFontSize * 1.48f;
+
+		if(point.x > dataQuadrant.getStartX() + textSize.width() + spaceToRect){
+			//画左边
+			//向上画
+			canvas.drawLine(point.x, point.y, point.x, point.y - spaceToTopBottom, mPaintBoxLine);
+			canvas.drawLine(point.x, point.y - spaceToTopBottom, point.x - spaceToRect, point.y - spaceToTopBottom, mPaintBoxLine);
+
+			PointF boxHS = new PointF(point.x - textSize.width() - spaceToRect, point.y - textSize.height() / 2.f - spaceToTopBottom - 4);
+			PointF boxHE = new PointF(point.x - spaceToRect, point.y + textSize.height() / 2.f - spaceToTopBottom + 4);
+
+			// draw a rectangle
+//			canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+			// draw text
+			canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+
+		}else{
+
+			// 画左边
+			if(point.x > dataQuadrant.getEndX() - textSize.width() - spaceToRect){
+				canvas.drawLine(point.x, point.y, point.x, point.y - spaceToTopBottom, mPaintBoxLine);
+				canvas.drawLine(point.x, point.y - spaceToTopBottom, point.x - spaceToRect, point.y - spaceToTopBottom, mPaintBoxLine);
+
+				PointF boxHS = new PointF(point.x - textSize.width() - spaceToRect, point.y - textSize.height() / 2.f - spaceToTopBottom - 4);
+				PointF boxHE = new PointF(point.x - spaceToRect, point.y + textSize.height() / 2.f - spaceToTopBottom + 4);
+
+				// draw a rectangle
+//				canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+				// draw text
+				canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+
+			}else{
+				canvas.drawLine(point.x, point.y, point.x, point.y - spaceToTopBottom, mPaintBoxLine);
+				canvas.drawLine(point.x, point.y - spaceToTopBottom, point.x + spaceToRect, point.y - spaceToTopBottom, mPaintBoxLine);
+
+				//画右边
+//				CGRect textRect = CGRectMake(pt.x + spaceToRect, pt.y - textSize.height / 2.f - spaceToTopBottom, textSize.width, textSize.height);
+
+				PointF boxHS = new PointF(point.x + spaceToRect, point.y - textSize.height() / 2.f - spaceToTopBottom - 4);
+				PointF boxHE = new PointF(point.x + textSize.width() + spaceToRect, point.y + textSize.height() / 2.f - spaceToTopBottom + 4);
+
+				// draw a rectangle
+//				canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+				// draw text
+				canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+			}
+		}
+	}
+
+	protected void drawMinLabel(Canvas canvas, double value , PointF point){
+		String valueStr = this.formatAxisYDegree(value);
+
+		int textFontSize = 28;
+
+		Paint mPaintBoxLine = new Paint();
+		mPaintBoxLine.setColor(Color.LTGRAY);
+		// mPaintBoxLine.setAlpha(80);
+		mPaintBoxLine.setStyle(Paint.Style.FILL);
+
+		Paint mPaintBoxText = new Paint();
+		mPaintBoxText.setColor(Color.BLACK);
+		mPaintBoxText.setAntiAlias(true);
+		mPaintBoxText.setTextSize(textFontSize);
+
+		Rect textSize = new Rect();
+		mPaintBoxText.getTextBounds(valueStr, 0, valueStr.length(), textSize);
+
+		float spaceToTopBottom = textFontSize ;
+		float spaceToRect = textFontSize * 1.48f;
+
+		if(point.x > dataQuadrant.getStartX() + textSize.width() + spaceToRect){
+			//画左边
+			//向上画
+			canvas.drawLine(point.x, point.y, point.x, point.y + spaceToTopBottom, mPaintBoxLine);
+			canvas.drawLine(point.x, point.y + spaceToTopBottom, point.x - spaceToRect, point.y + spaceToTopBottom, mPaintBoxLine);
+
+			PointF boxHS = new PointF(point.x - textSize.width() - spaceToRect, point.y - textSize.height() / 2.f + spaceToTopBottom - 4);
+			PointF boxHE = new PointF(point.x - spaceToRect, point.y + textSize.height() / 2.f + spaceToTopBottom + 4);
+
+			// draw a rectangle
+			canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+			// draw text
+			canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+
+		}else{
+
+			// 画左边
+			if(point.x > dataQuadrant.getEndX() - textSize.width() - spaceToRect){
+				canvas.drawLine(point.x, point.y, point.x, point.y + spaceToTopBottom, mPaintBoxLine);
+				canvas.drawLine(point.x, point.y + spaceToTopBottom, point.x - spaceToRect, point.y + spaceToTopBottom, mPaintBoxLine);
+
+				PointF boxHS = new PointF(point.x - textSize.width() - spaceToRect, point.y - textSize.height() / 2.f + spaceToTopBottom - 4);
+				PointF boxHE = new PointF(point.x - spaceToRect, point.y + textSize.height() / 2.f + spaceToTopBottom + 4);
+
+				// draw a rectangle
+				canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+				// draw text
+				canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+
+			}else{
+				canvas.drawLine(point.x, point.y, point.x, point.y + spaceToTopBottom, mPaintBoxLine);
+				canvas.drawLine(point.x, point.y + spaceToTopBottom, point.x + spaceToRect, point.y + spaceToTopBottom, mPaintBoxLine);
+
+				//画右边
+				PointF boxHS = new PointF(point.x + spaceToRect, point.y - textSize.height() / 2.f + spaceToTopBottom - 4);
+				PointF boxHE = new PointF(point.x + textSize.width() + spaceToRect, point.y + textSize.height() / 2.f + spaceToTopBottom + 4);
+
+				// draw a rectangle
+				canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+				// draw text
+				canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+			}
+		}
+	}
+
+	protected void XXdrawMinLabel(Canvas canvas, double value , PointF point){
+		String valueStr = this.formatAxisYDegree(value);
+
+		int textFontSize = 20;
+
+		Paint mPaintBoxLine = new Paint();
+		mPaintBoxLine.setColor(Color.LTGRAY);
+		// mPaintBoxLine.setAlpha(80);
+		mPaintBoxLine.setStyle(Paint.Style.FILL);
+
+		Paint mPaintBoxText = new Paint();
+		mPaintBoxText.setColor(Color.LTGRAY);
+		mPaintBoxText.setAntiAlias(true);
+		mPaintBoxText.setTextSize(textFontSize);
+
+		Rect textSize = new Rect();
+		mPaintBoxText.getTextBounds(valueStr, 0, valueStr.length(), textSize);
+
+		float spaceToTopBottom = 0;//textFontSize ;
+		float spaceToRect = textFontSize * 1.48f;
+
+		if(point.x > dataQuadrant.getStartX() + textSize.width() + spaceToRect){
+			//画左边
+			//向上画
+			canvas.drawLine(point.x, point.y, point.x, point.y + spaceToTopBottom, mPaintBoxLine);
+			canvas.drawLine(point.x, point.y + spaceToTopBottom, point.x - spaceToRect, point.y + spaceToTopBottom, mPaintBoxLine);
+
+			PointF boxHS = new PointF(point.x - textSize.width() - spaceToRect, point.y - textSize.height() / 2.f + spaceToTopBottom - 4);
+			PointF boxHE = new PointF(point.x - spaceToRect, point.y + textSize.height() / 2.f + spaceToTopBottom + 4);
+
+			// draw a rectangle
+//			canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+			// draw text
+			canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+
+		}else{
+
+			// 画左边
+			if(point.x > dataQuadrant.getEndX() - textSize.width() - spaceToRect){
+				canvas.drawLine(point.x, point.y, point.x, point.y + spaceToTopBottom, mPaintBoxLine);
+				canvas.drawLine(point.x, point.y + spaceToTopBottom, point.x - spaceToRect, point.y + spaceToTopBottom, mPaintBoxLine);
+
+				PointF boxHS = new PointF(point.x - textSize.width() - spaceToRect, point.y - textSize.height() / 2.f + spaceToTopBottom - 4);
+				PointF boxHE = new PointF(point.x - spaceToRect, point.y + textSize.height() / 2.f + spaceToTopBottom + 4);
+
+				// draw a rectangle
+//				canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+				// draw text
+				canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+
+			}else{
+				canvas.drawLine(point.x, point.y, point.x, point.y + spaceToTopBottom, mPaintBoxLine);
+				canvas.drawLine(point.x, point.y + spaceToTopBottom, point.x + spaceToRect, point.y + spaceToTopBottom, mPaintBoxLine);
+
+				//画右边
+				PointF boxHS = new PointF(point.x + spaceToRect, point.y - textSize.height() / 2.f + spaceToTopBottom - 4);
+				PointF boxHE = new PointF(point.x + textSize.width() + spaceToRect, point.y + textSize.height() / 2.f + spaceToTopBottom + 4);
+
+				// draw a rectangle
+//				canvas.drawRect(boxHS.x, boxHS.y, boxHE.x, boxHE.y, mPaintBoxLine);
+				// draw text
+				canvas.drawText(valueStr, boxHS.x, boxHS.y + textFontSize, mPaintBoxText);
+			}
+		}
+	}
+
+	protected void drawSticksAsLine(Canvas canvas) {
+		if (null == stickData) {
+			return;
+		}
+		if (stickData.size() <= 0) {
+			return;
+		}
+
+		float lineLength = dataQuadrant.getPaddingWidth() / getDisplayNumber()
+				- stickSpacing;
+		float startX = dataQuadrant.getPaddingStartX() + lineLength / 2;
+
+		Paint mPaintStroke = new Paint();
+		mPaintStroke.setStyle(Paint.Style.STROKE);
+		mPaintStroke.setStrokeWidth(2.0f);
+		mPaintStroke.setColor(displayStickAsLineColor);
+
+		// start point
+		PointF ptFirst = null;
+
+		for (int j = getDisplayFrom(); j < getDisplayTo(); j++) {
+
+			OHLCEntity ohlc = (OHLCEntity) stickData.get(j);
+			double value = ohlc.getClose();
+
+			if(isNoneDisplayValue((float)value)){
+
+			}else {
+//				// calculate Y
+//				float valueY = (float) ((1f - (value - minValue)
+//						/ (maxValue - minValue)) * dataQuadrant.getPaddingHeight())
+//						+ dataQuadrant.getPaddingStartY();
+
+				float closeY = (float) ((1f - (ohlc.getClose() - minValue)
+						/ (maxValue - minValue))
+						* (dataQuadrant.getPaddingHeight()) + dataQuadrant.getPaddingStartY());
+
+				// if is not last point connect to previous point
+				if (j > getDisplayFrom() && ptFirst!=null) {
+					canvas.drawLine(ptFirst.x, ptFirst.y, startX, closeY,
+							mPaintStroke);
+				}
+				// reset
+				ptFirst = new PointF(startX, closeY);
+			}
+			startX = startX + stickSpacing + lineLength;
+		}
+	}
 	
 	@Override
-	protected PointF calcBindPoint(float x ,float y) {
+	protected PointF calcBindPoint(float x , float y) {
 		float calcX = 0;
 		float calcY = 0;
 		int index = calcSelectedIndex(x,y);
-		float stickWidth = dataQuadrant.getPaddingWidth() / displayNumber;
-		OHLCEntity stick = (OHLCEntity)stickData.get(index);
-		calcY = (float) ((1f - (stick.getClose() - minValue)
-				/ (maxValue - minValue))
-				* (dataQuadrant.getPaddingHeight()) + dataQuadrant.getPaddingStartY());
-		calcX = dataQuadrant.getPaddingStartX() + stickWidth * (index - displayFrom) + stickWidth / 2;
-		
+
+		float stickWidth = dataQuadrant.getPaddingWidth() / getDataDisplayNumber();
+
+		if (index >= getDisplayFrom() && index <= getDisplayTo() - 1) {
+			OHLCEntity stick = (OHLCEntity) stickData.get(index);
+			calcY = (float) ((1f - (stick.getClose() - minValue)
+					/ (maxValue - minValue))
+					* (dataQuadrant.getPaddingHeight()) + dataQuadrant.getPaddingStartY());
+			calcX = dataQuadrant.getPaddingStartX() + stickWidth * (index - getDisplayFrom()) + stickWidth / 2;
+		}
 		return new PointF(calcX,calcY);
 	}
 

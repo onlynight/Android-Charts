@@ -22,11 +22,12 @@
 
 package cn.limc.androidcharts.axis;
 
-import cn.limc.androidcharts.common.Quadrant;
-import cn.limc.androidcharts.view.GridChart;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+
+import cn.limc.androidcharts.common.Quadrant;
+import cn.limc.androidcharts.view.GridChart;
 
 /** 
  * <p>en</p>

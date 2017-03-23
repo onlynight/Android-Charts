@@ -1,5 +1,5 @@
 /*
- * ColoredStickEntity.java
+ * ITouchedIndexListener.java
  * Android-Charts
  *
  * Created by limc on 2014.
@@ -19,43 +19,8 @@
  * limitations under the License.
  */
 
-package cn.limc.androidcharts.entity;
+package cn.limc.androidcharts.event;
 
-/**
- * <p>
- * en
- * </p>
- * <p>
- * jp
- * </p>
- * <p>
- * cn
- * </p>
- * 
- * @author limc
- * @version v1.0 2014/01/20 18:02:55
- * 
- */
-public class ColoredStickEntity extends StickEntity implements IHasColor {
-	private int color;
-
-	public ColoredStickEntity(double high, double low, long date, int color) {
-		super(high, low, date);
-		this.color = color;
-	}
-
-	/**
-	 * @return the color
-	 */
-	public int getColor() {
-		return color;
-	}
-
-	/**
-	 * @param color
-	 *            the color to set
-	 */
-	public void setColor(int color) {
-		this.color = color;
-	}
+public interface ITouchedIndexListener {
+	void onSelectedIndexChanged(ITouchable touchable, int index);
 }

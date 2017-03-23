@@ -24,6 +24,7 @@ package cn.limc.androidcharts.axis;
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
+
 import cn.limc.androidcharts.view.GridChart;
 
 /** 
@@ -48,7 +49,7 @@ public class VerticalAxis extends Axis {
      * 默认轴线左边距
      * </p>
      */
-    public static final float DEFAULT_WIDTH = 50f;
+    public static final float DEFAULT_WIDTH = 70f;
     
 	protected float width = DEFAULT_WIDTH;
 	
@@ -69,6 +70,10 @@ public class VerticalAxis extends Axis {
 	 */
 	public float getWidth() {
 		return width;
+	}
+
+	public void setWidth(float width){
+		this.width = width;
 	}
 	/* (non-Javadoc)
 	 * 
@@ -93,6 +98,7 @@ public class VerticalAxis extends Axis {
      * @param canvas
      */
     public void draw(Canvas canvas) {
+
         float length = inChart.getHeight() - inChart.getAxisX().getHeight()
                 - inChart.getBorderWidth();
         float postX;

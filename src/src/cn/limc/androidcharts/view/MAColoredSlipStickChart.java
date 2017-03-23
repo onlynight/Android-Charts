@@ -1,8 +1,8 @@
 /*
- * MASlipCandleStickChart.java
+ * MAColoredSlipStickChart.java
  * Android-Charts
  *
- * Created by limc on 2014.
+ * Created by limc on 2015.
  *
  * Copyright 2011 limc.cn All rights reserved.
  *
@@ -44,10 +44,10 @@ import cn.limc.androidcharts.entity.LineEntity;
  * </p>
  * 
  * @author limc
- * @version v1.0 2014/01/21 12:03:25
+ * @version v1.0 2014/01/21 10:55:40
  * 
  */
-public class MASlipCandleStickChart extends SlipCandleStickChart {
+public class MAColoredSlipStickChart extends ColoredSlipStickChart {
 
 	/**
 	 * <p>
@@ -64,58 +64,57 @@ public class MASlipCandleStickChart extends SlipCandleStickChart {
 
 	/**
 	 * <p>
-	 * Constructor of MASlipCandleStickChart
+	 * Constructor of MASlipStickChart
 	 * </p>
 	 * <p>
-	 * MASlipCandleStickChart类对象的构造函数
+	 * MASlipStickChart类对象的构造函数
 	 * </p>
 	 * <p>
-	 * MASlipCandleStickChartのコンストラクター
+	 * MASlipStickChartのコンストラクター
 	 * </p>
-	 * 
+	 *
 	 * @param context
 	 * @param attrs
 	 * @param defStyle
 	 */
-	public MASlipCandleStickChart(Context context, AttributeSet attrs,
-                                  int defStyle) {
+	public MAColoredSlipStickChart(Context context, AttributeSet attrs, int defStyle) {
 		super(context, attrs, defStyle);
 		// TODO Auto-generated constructor stub
 	}
 
 	/**
 	 * <p>
-	 * Constructor of MASlipCandleStickChart
+	 * Constructor of MASlipStickChart
 	 * </p>
 	 * <p>
-	 * MASlipCandleStickChart类对象的构造函数
+	 * MASlipStickChart类对象的构造函数
 	 * </p>
 	 * <p>
-	 * MASlipCandleStickChartのコンストラクター
+	 * MASlipStickChartのコンストラクター
 	 * </p>
-	 * 
+	 *
 	 * @param context
 	 * @param attrs
 	 */
-	public MASlipCandleStickChart(Context context, AttributeSet attrs) {
+	public MAColoredSlipStickChart(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		// TODO Auto-generated constructor stub
 	}
 
 	/**
 	 * <p>
-	 * Constructor of MASlipCandleStickChart
+	 * Constructor of MASlipStickChart
 	 * </p>
 	 * <p>
-	 * MASlipCandleStickChart类对象的构造函数
+	 * MASlipStickChart类对象的构造函数
 	 * </p>
 	 * <p>
-	 * MASlipCandleStickChartのコンストラクター
+	 * MASlipStickChartのコンストラクター
 	 * </p>
-	 * 
+	 *
 	 * @param context
 	 */
-	public MASlipCandleStickChart(Context context) {
+	public MAColoredSlipStickChart(Context context) {
 		super(context);
 		// TODO Auto-generated constructor stub
 	}
@@ -129,20 +128,21 @@ public class MASlipCandleStickChart extends SlipCandleStickChart {
 		// 逐条输出MA线
 		for (int i = 0; i < this.linesData.size(); i++) {
 			LineEntity<DateValueEntity> line = this.linesData.get(i);
-			if (line != null && line.getLineData() != null &&line.getLineData().size() > 0) {
+			if (line != null && line.getLineData().size() > 0) {
 				// 判断显示为方柱或显示为线条
 				for (int j = getDisplayFrom(); j < getDisplayTo(); j++) {
 					DateValueEntity lineData = line.getLineData().get(j);
-					if(isNoneDisplayValue(lineData.getValue())){
-					}else{
-						if (lineData.getValue() < minValue) {
-							minValue = lineData.getValue();
-						}
+                    if (isNoneDisplayValue(lineData.getValue())){
 
-						if (lineData.getValue() > maxValue) {
-							maxValue = lineData.getValue();
-						}
-					}
+                    }else {
+                        if (lineData.getValue() < minValue) {
+                            minValue = lineData.getValue();
+                        }
+
+                        if (lineData.getValue() > maxValue) {
+                            maxValue = lineData.getValue();
+                        }
+                    }
 				}
 			}
 		}
@@ -164,7 +164,7 @@ public class MASlipCandleStickChart extends SlipCandleStickChart {
 	protected void onDraw(Canvas canvas) {
 		super.onDraw(canvas);
 	}
-
+	
 	@Override
 	public void drawData(Canvas canvas){
 		super.drawData(canvas);
@@ -174,7 +174,6 @@ public class MASlipCandleStickChart extends SlipCandleStickChart {
 			drawLines(canvas);
 		}
 	}
-
 
 	/**
 	 * <p>
@@ -197,7 +196,7 @@ public class MASlipCandleStickChart extends SlipCandleStickChart {
 			return;
 		}
 		// distance between two points
-		float lineLength = dataQuadrant.getPaddingWidth() / getDataDisplayNumber() - stickSpacing;
+		float lineLength = dataQuadrant.getPaddingWidth() / getDisplayNumber() - stickSpacing;
 		// start point‘s X
 		float startX;
 
@@ -226,18 +225,21 @@ public class MASlipCandleStickChart extends SlipCandleStickChart {
 			for (int j = super.getDisplayFrom(); j < super.getDisplayFrom()
 					+ super.getDisplayNumber(); j++) {
 				float value = lineData.get(j).getValue();
-				// calculate Y
-				float valueY = (float) ((1f - (value - minValue)
-						/ (maxValue - minValue)) * dataQuadrant.getPaddingHeight())
-						+ dataQuadrant.getPaddingStartY();
+                if(isNoneDisplayValue(value)){
+                }else{
+                    // calculate Y
+                    float valueY = (float) ((1f - (value - minValue)
+                            / (maxValue - minValue)) * dataQuadrant.getPaddingHeight())
+                            + dataQuadrant.getPaddingStartY();
 
-				// if is not last point connect to previous point
-				if (j > super.getDisplayFrom()) {
-					canvas.drawLine(ptFirst.x, ptFirst.y, startX, valueY,
-							mPaint);
-				}
-				// reset
-				ptFirst = new PointF(startX, valueY);
+                    // if is not last point connect to previous point
+                    if (j > super.getDisplayFrom() && ptFirst != null) {
+                        canvas.drawLine(ptFirst.x, ptFirst.y, startX, valueY,
+                                mPaint);
+                    }
+                    // reset
+                    ptFirst = new PointF(startX, valueY);
+                }
 				startX = startX + stickSpacing + lineLength;
 			}
 		}
@@ -254,17 +256,7 @@ public class MASlipCandleStickChart extends SlipCandleStickChart {
 	 * @param linesData
 	 *            the linesData to set
 	 */
-	public void setLinesData(List<LineEntity<DateValueEntity>> linesData) {
+	public void setLineData(List<LineEntity<DateValueEntity>> linesData) {
 		this.linesData = linesData;
-	}
-
-	@Override
-	public void touchDown(PointF pt) {
-		super.touchDown(pt);
-	}
-
-	@Override
-	public void touchUp(PointF pt) {
-		super.touchUp(pt);
 	}
 }
